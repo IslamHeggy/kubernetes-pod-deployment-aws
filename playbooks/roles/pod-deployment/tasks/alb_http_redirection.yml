@@ -1,0 +1,8 @@
+---
+
+
+- include_vars: "{{ set_client }}"
+
+- name: create a new listener for http redirection to https
+  shell: aws elbv2 create-listener --load-balancer-arn "{{ item.load_balancer_arn }}" --protocol HTTP --port 80 --default-actions "Type=redirect,RedirectConfig={Protocol=HTTPS,Port=443,Host='#{host}',Query='#{query}',Path='/#{path}',StatusCode=HTTP_301}"
+  with_items: "{{ new_alb_facts.results }}"

@@ -1,0 +1,19 @@
+
+---
+- name: associate application load balancer to web acl
+  shell: aws waf-regional associate-web-acl --web-acl-id "{{ waf_id }}" --resource-arn "{{ item.load_balancer_arn }}"
+  with_items:
+    - "{{ new_alb_facts.results }}"
+
+- name: associate internal https application load balancer to web acl
+  shell: aws waf-regional associate-web-acl --web-acl-id "{{ waf_id }}" --resource-arn "{{ item.load_balancer_arn }}"
+  with_items:
+    - "{{ new_internal_alb_facts_https.results }}"
+  when: client_create_internal_alb == "yes-https" 
+
+
+- name: associate internal http application load balancer to web acl
+  shell: aws waf-regional associate-web-acl --web-acl-id "{{ waf_id }}" --resource-arn "{{ item.load_balancer_arn }}"
+  with_items:
+    - "{{ new_internal_alb_facts_http.results }}"
+  when: (client_create_internal_alb == "yes-http")

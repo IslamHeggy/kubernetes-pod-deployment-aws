@@ -1,0 +1,15 @@
+---
+
+- include_vars: "{{ set_client }}"
+
+
+- name: check for the type of deployment (new/sizing)
+  shell: "kubectl --kubeconfig ../../kubeconfig.yaml get deployments --all-namespaces | grep {{ client_namespace }}"
+  register: deployment_result
+  ignore_errors: yes
+
+- include: new_deployment.yml
+  when: deployment_result.rc != 0
+
+- include: edit_current_deployment.yml
+  when: deployment_result.rc == 0

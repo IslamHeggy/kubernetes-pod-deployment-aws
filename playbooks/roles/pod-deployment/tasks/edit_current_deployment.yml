@@ -1,0 +1,12 @@
+---
+
+- template:
+    src: "{{ client_templates_path }}/client_deployment.j2"
+    dest: "roles/pod-deployment/files/client_deployment_{{ set_client }}"
+
+- name: adjust the Deployment by reading the definition from a local file
+  k8s:
+    state: present
+    force: True
+    kubeconfig: ../../kubeconfig.yaml
+    src: "roles/pod-deployment/files/client_deployment_{{ set_client }}"

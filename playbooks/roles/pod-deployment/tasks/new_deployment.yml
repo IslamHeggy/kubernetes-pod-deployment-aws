@@ -1,0 +1,13 @@
+---
+
+- template:
+    src: "{{ client_templates_path }}/{{ item }}.j2"
+    dest: "roles/pod-deployment/files/{{ item }}_{{ set_client }}"
+  with_items: "{{ client_templates }}"
+
+- name: Create a Deployment by reading the definition from a local file
+  k8s:
+    state: present
+    kubeconfig: ../../kubeconfig.yaml
+    src: "roles/pod-deployment/files/{{ item }}_{{ set_client }}"
+  with_items: "{{ client_templates }}"

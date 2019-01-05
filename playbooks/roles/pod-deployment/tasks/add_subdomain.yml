@@ -1,0 +1,43 @@
+---
+
+- name: create a subdomain for newly created application load balancers
+  route53:
+    state: present
+    zone: "{{ dns_hosted_zone }}"
+    record: "{{ item }}.{{ dns_hosted_zone }}"
+    type: A
+    value: "{{ new_alb_facts.results.0.dns_name }}"
+    alias: True
+    overwrite: True
+    alias_hosted_zone_id: "{{ new_alb_facts.results.0.canonical_hosted_zone_id }}"
+  with_items:
+  - "{{ subdomain }}"
+
+- name: create a subdomain for newly created HTTPS internal application load balancers
+  route53:
+    state: present
+    zone: "{{ dns_hosted_zone }}"
+    record: "private-{{ item }}.{{ dns_hosted_zone }}"
+    type: A
+    value: "{{ new_internal_alb_facts_https.results.0.dns_name }}"
+    alias: True
+    overwrite: True
+    alias_hosted_zone_id: "{{ new_internal_alb_facts_https.results.0.canonical_hosted_zone_id }}"
+  with_items:
+  - "{{ subdomain }}"
+  when: client_create_internal_alb == "yes-https"
+
+- name: create a subdomain for newly created HTTP internal application load balancers
+  route53:
+    state: present
+    zone: "{{ dns_hosted_zone }}"
+    record: "private-{{ item }}.{{ dns_hosted_zone }}"
+    type: A
+    value: "{{ new_internal_alb_facts_http.results.0.dns_name }}"
+    alias: True
+    overwrite: True
+    alias_hosted_zone_id: "{{ new_internal_alb_facts_http.results.0.canonical_hosted_zone_id }}"
+  with_items:
+  - "{{ subdomain }}"
+  when: client_create_internal_alb == "yes-http"
+

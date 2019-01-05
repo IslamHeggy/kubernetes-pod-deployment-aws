@@ -1,0 +1,72 @@
+---
+
+- include_vars: "{{ set_client }}"
+
+# create security group
+
+- name: create a new security group for the ALB
+  ec2_group:
+    name: "{{ client_alb_sec_group_name }}"
+    description: "{{ client_alb_sec_group_des }}"
+    vpc_id: "{{ client_vpc_id }}"
+    rules:
+      - proto: tcp
+        from_port: 80
+        to_port: 80
+        cidr_ip: "{{ public_whitelisted_cidr }}"
+      - proto: tcp
+        from_port: 443
+        to_port: 443
+        cidr_ip: "{{ public_whitelisted_cidr }}"
+  register: alb_security_group
+
+
+
+
+# Create new target group and health check
+- name: create new target group with a new listener
+  elb_target_group:
+    name: "{{ client_load_balancer_name }}"
+    health_check_protocol: HTTPS
+    health_check_interval: "{{ client_health_check_interval }}"
+    health_check_port: "{{ https_nodeport }}"
+    healthy_threshold_count: "{{ client_healthy_threshold_count }}"
+    unhealthy_threshold_count: "{{ client_healthy_threshold_count }}"
+    health_check_timeout: "{{ client_health_check_timeout }}"
+    health_check_path: "{{ client_health_check_paths }}"
+    targets:
+    protocol: HTTPS
+    port: "{{ https_nodeport }}"
+    vpc_id: "{{ client_vpc_id }}"
+    state: present
+  register: target_facts
+
+
+
+- name: create new application load balancer
+  elb_application_lb:
+    name: "{{ client_load_balancer_name }}-app"
+    subnets: "{{ client_subnets }}"
+    security_groups: "{{ alb_security_group.group_id }}"
+    scheme: "{{ client_alb_scheme }}"
+   # tags: "{{ item.0.tags }}"
+    listeners:
+      - Protocol: HTTPS
+        Port: 443
+        SslPolicy: "{{ client_ssl_policy }}"
+        DefaultActions:
+          - Type: forward
+            TargetGroupArn: "{{ item.target_group_arn }}"
+        Certificates:
+          - CertificateArn: "{{ client_certificate_arn }}"
+    state: present
+  register: new_alb_facts
+  with_items:
+    - "{{ target_facts }}"
+
+- name: attach instances to the new ALB
+  elb_target:
+   target_group_name: "{{ client_load_balancer_name }}"
+   target_id: "{{ item }}"
+   state: present
+  with_items: "{{ client_instances_id_ALB }}"

@@ -1,0 +1,101 @@
+---
+- include_vars: "{{ set_client }}"
+
+- block:
+    # create security group
+    - name: create a new security group for the internal ALB
+      ec2_group:
+        name: "{{ client_internal_alb_sec_group_name }}"
+        description: "{{ client_internal_alb_sec_group_des }}"
+        vpc_id: "{{ client_vpc_id }}"
+        rules:
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: "{{ client_vpn_source_cidr }}"
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: "{{ client_vpn_source_cidr }}"
+      register: alb_internal_security_group
+      when: client_create_internal_alb == "yes-http" or client_create_internal_alb == "yes-https"
+
+    - set_fact:
+        protocol: HTTP
+        port: "{{ http_nodeport }}"
+      when: client_create_internal_alb == "yes-http"
+
+    - set_fact:
+        protocol: HTTPS
+        port: "{{ https_nodeport }}"
+      when: client_create_internal_alb == "yes-https"
+
+    # Create new target group and health check
+    - name: create new target group with a new listener
+      elb_target_group:
+        name: "{{ client_internal_load_balancer_name }}"
+        health_check_protocol: "{{ protocol }}"
+        health_check_interval: "{{ client_internal_health_check_interval }}"
+        health_check_port: "{{ port | int }}"
+        healthy_threshold_count: "{{ client_internal_healthy_threshold_count }}"
+        unhealthy_threshold_count: "{{ client_internal_healthy_threshold_count }}"
+        health_check_timeout: "{{ client_internal_health_check_timeout }}"
+        health_check_path: "{{ client_internal_health_check_paths }}"
+        targets:
+        protocol: "{{ protocol }}"
+        port: "{{ port | int }}"
+        vpc_id: "{{ client_vpc_id }}"
+        state: present
+      register: internal_target_facts
+      when: client_create_internal_alb == "yes-http" or client_create_internal_alb == "yes-https"
+
+
+    - name: create new http internal application load balancer
+      elb_application_lb:
+        name: "{{ client_internal_load_balancer_name }}-app"
+        subnets: "{{ client_subnets }}"
+        security_groups: "{{ alb_internal_security_group.group_id }}"
+        scheme: "{{ client_internal_alb_scheme }}"
+       # tags: "{{ item.0.tags }}"
+        listeners:
+          - Protocol: "{{ protocol }}"
+            Port: 80
+            DefaultActions:
+              - Type: forward
+                TargetGroupArn: "{{ item.target_group_arn }}"
+        state: present
+      register: new_internal_alb_facts_http
+      with_items:
+        - "{{ internal_target_facts }}"
+      when: client_create_internal_alb == "yes-http"
+
+    - name: create new https internal application load balancer
+      elb_application_lb:
+        name: "{{ client_internal_load_balancer_name }}-app"
+        subnets: "{{ client_subnets }}"
+        security_groups: "{{ alb_internal_security_group.group_id }}"
+        scheme: "{{ client_internal_alb_scheme }}"
+       # tags: "{{ item.0.tags }}"
+        listeners:
+          - Protocol: "{{ protocol }}"
+            Port: 443
+            SslPolicy: "{{ client_ssl_policy }}"
+            DefaultActions:
+              - Type: forward
+                TargetGroupArn: "{{ item.target_group_arn }}"
+            Certificates:
+              - CertificateArn: "{{ client_certificate_arn }}"
+        state: present
+      register: new_internal_alb_facts_https
+      with_items:
+        - "{{ internal_target_facts }}"
+      when: client_create_internal_alb == "yes-https"
+
+
+    - name: attach instances to the new internal ALB
+      elb_target:
+       target_group_name: "{{ client_internal_load_balancer_name }}"
+       target_id: "{{ item }}"
+       state: present
+      with_items: "{{ client_instances_id_ALB }}"
+      when: client_create_internal_alb == "yes-http" or client_create_internal_alb == "yes-https"

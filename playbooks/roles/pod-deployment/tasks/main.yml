@@ -1,0 +1,10 @@
+---
+
+ - include: set_up_database.yml
+ - include: deploy_pods.yml
+ - include: create_internet_facing_alb.yml
+ - include: alb_http_redirection.yml
+ - include: create_internal_alb.yml
+ - include: add_subdomain.yml
+ - include: add_alb_waf.yml
+ - include: add_alb_sg.yml

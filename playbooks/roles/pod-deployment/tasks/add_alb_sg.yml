@@ -1,0 +1,10 @@
+---
+
+- name: add alb sec groups to instances sec groups
+  shell: aws ec2 authorize-security-group-ingress --group-id "{{ worker_node_secgroup }}"  --source-group "{{ alb_security_group.group_id }}" --protocol tcp --port 30000-36000
+  ignore_errors: yes
+
+- name: add internal alb sec groups to instances sec groups
+  shell: aws ec2 authorize-security-group-ingress --group-id "{{ worker_node_secgroup }}"  --source-group "{{ alb_internal_security_group.group_id }}" --protocol tcp --port 30000-36000
+  ignore_errors: yes
+  when: client_create_internal_alb == 'yes-https' or client_create_internal_alb == 'yes-http'

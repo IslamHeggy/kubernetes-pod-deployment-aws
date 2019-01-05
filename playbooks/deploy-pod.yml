@@ -1,0 +1,10 @@
+---
+
+- name: deploy pod
+  hosts: localhost
+  connection: local
+  roles:
+    - pod-deployment
+
+# To run this from from the root of the git repo:  run deply-pod.yml playbook with extra vars -e first the set_client for the deployment, then the -e for client_create_internal_alb either yes-http, yes-https or none.
+# ie. ansible-playbook ansible/playbooks/deploy-pod.yml -e 'set_client=client1.yml' -e 'client_create_internal_alb=yes-https' -i ansible/inventory/myenvironment/

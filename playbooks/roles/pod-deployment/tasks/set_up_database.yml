@@ -1,0 +1,80 @@
+---
+
+- include_vars: "{{ set_client }}"
+
+- name: install prerequisites on worker node
+  shell: 'yum install python postgresql postgresql-libs python-psycopg2 -y'
+  delegate_to: "{{ worker_node_1 }}"
+  remote_user: ec2-user
+  become: true
+
+- name: get the rds credentials from secrets manager
+  shell: "aws secretsmanager get-secret-value --secret-id={{ client_rds_secret }} | jq .SecretString -rc | jq {{ item }}"
+  with_items: "{{ client_rds_creds }}"
+  register: rds_vars
+
+
+- name: generate random password
+  shell: aws secretsmanager get-random-password --password-length 32 --no-include-space --exclude-punctuation | jq -r .RandomPassword
+  register: db_pass
+
+
+- postgresql_db:
+    name: "{{ client_db_name }}"
+    login_host: "{{ rds_vars.results[2].stdout }}"
+    login_user: "{{ rds_vars.results[0].stdout }}"
+    login_password: "{{ rds_vars.results[1].stdout }}"
+ #   owner: "{{ client_db_user }}"
+  delegate_to: "{{ worker_node_1 }}"
+  remote_user: ec2-user
+  become: true
+
+
+- postgresql_user:
+    name: "{{ client_db_user }}"
+    login_host: "{{ rds_vars.results[2].stdout }}"
+    login_user: "{{ rds_vars.results[0].stdout }}"
+    login_password: "{{ rds_vars.results[1].stdout }}"
+    db: "{{ client_db_name }}"
+    password: "{{ db_pass.stdout }}"
+    encrypted: yes
+    role_attr_flags: "{{ client_rds_attr }}"
+  delegate_to: "{{ worker_node_1 }}"
+  remote_user: ec2-user
+  become: true
+
+
+- postgresql_privs:
+    login_host: "{{ rds_vars.results[2].stdout }}"
+    login_user: "{{ rds_vars.results[0].stdout }}"
+    login_password: "{{ rds_vars.results[1].stdout }}"
+    database: "{{ client_db_name }}"
+    state: present
+    privs: "{{ client_user_privs }}"
+    type: database
+    ssl_mode: require
+    roles: "{{ client_db_user }}"
+  delegate_to: "{{ worker_node_1 }}"
+  remote_user: ec2-user
+  become: true
+
+
+- template:
+    src: "../templates/client_secrets.j2"
+    dest: "roles/pod-deployment/files/tmp-secrets.json"
+
+- name: check if secret exists
+  shell: aws secretsmanager describe-secret --secret-id {{ secret_name }}
+  register: secret_exists
+  ignore_errors: yes
+
+- name: create a secret for the new created credentials
+  shell: aws secretsmanager create-secret --name {{ secret_name }} --description "{{ secret_description }}" --secret-string file://roles/pod-deployment/files/tmp-secrets.json
+  when: secret_exists.rc != 0
+
+- name: update a secret for the new created credentials
+  shell: aws secretsmanager update-secret --secret-id {{ secret_name }} --secret-string file://roles/pod-deployment/files/tmp-secrets.json
+  when: secret_exists.rc == 0
+
+- name: delete tmp-secrets.json
+  shell: "rm -f roles/pod-deployment/files/tmp-secrets.json"

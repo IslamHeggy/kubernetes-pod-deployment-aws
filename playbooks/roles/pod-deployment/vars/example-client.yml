@@ -1,0 +1,126 @@
+---
+
+# START CLIENT POD DEPLOYMENT SPECIFICS HERE
+
+client_vpn_source_cidr:  # Enter their private network cidr per the vpn - any net size can be added and additional subnets added manually later
+public_whitelisted_cidr:  # Enter the public ip cidr for initial access - typically the macro-eyes developer IP
+
+client_namespace: test-dev  # must be unique and no other deployment has this namespace on this cluster
+client_pods_replicas: 2  # must match number of kubernetes worker nodes
+
+# Service reserved ports must be unique amongst the full cluster between 30000-35000
+
+http_nodeport: 30001
+https_nodeport: 30002
+# 
+
+
+
+# The secrets template variables 
+
+    # put your secrets variables here.
+
+
+# kubernetes Nodes params:  must be updated when a worker node is rebuilt or added.
+
+client_instances_id_ALB:
+-
+-
+client_vpc_id: ""
+client_subnets:
+-
+-
+worker_node_1:
+worker_node_secgroup:
+
+# WAF variables
+waf_id:
+
+# TLS cert arn for *.test.com
+client_certificate_arn: ""
+
+dns_hosted_zone: test.com
+
+# Images Tags
+
+# You can specify your variable images tags here
+
+
+# RDS Vars
+
+client_rds_secret:
+
+
+############################################### STOP EDITING HERE ##########################################################
+
+
+# DNS variables
+
+subdomain:
+- "{{ client_namespace }}"
+
+# Template names
+
+client_templates:
+- client_namespace
+- client_service
+- client_deployment
+
+
+client_int_vars_templates:
+- client_deployment
+
+
+client_int_vars:
+- replicas
+
+client_templates_path: '../templates'
+
+
+client_rds_creds:
+- ".username -r"
+- ".password -r"
+- ".host -r"
+
+client_db_user: "{{ client_namespace }}"
+client_rds_attr: "LOGIN"
+client_db_name: "{{ client_namespace }}"
+client_user_privs: "ALL"
+
+# secrets template vars
+
+secret_name: "{{ client_namespace }}-secret"
+secret_description: "pod-deployments-secrets-{{ client_namespace }}" # change it according to your secret
+
+
+
+# ALB Settings
+
+client_load_balancer_name: "{{ client_namespace }}-alb2"
+client_health_check_interval: 30
+client_health_check_port: 443
+client_healthy_threshold_count: 10
+client_unhealthy_threshold_count: 2
+client_health_check_timeout: 5
+client_health_check_paths: ""
+
+client_alb_scheme: internet-facing
+client_ssl_policy: ELBSecurityPolicy-2016-08
+client_alb_sec_group_name: "{{ client_namespace }}_sec_group"
+client_alb_sec_group_des: "{{ client_namespace }} kubernetes deployment security group"
+
+
+# Internal ALB settings
+
+#client_create_internal_alb: yes-https
+
+client_internal_load_balancer_name: "{{ client_namespace }}-internal-alb"
+client_internal_health_check_interval: 30
+client_internal_health_check_port: 443
+client_internal_healthy_threshold_count: 10
+client_internal_unhealthy_threshold_count: 2
+client_internal_health_check_timeout: 5
+client_internal_health_check_paths: ""
+client_internal_alb_scheme: internal
+client_internal_alb_sec_group_name: "{{ client_load_balancer_name }}-sec-group"
+client_internal_alb_sec_group_des: "{{ client_namespace }} deployment internal ALB security group"
