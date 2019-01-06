@@ -8,7 +8,7 @@ This repository contains ansible code to automate the pod deployments on kuberne
 * **[How does it work?](#how-does-it-work)**
 * **[Create New Deployment](#Create-New-Deployment)**
 * **[Edit Already Existing Deployment](#Edit-Already-Existing-Deployment)**
-* **[Troubleshooting](#trouble)**
+* **[Troubleshooting](#Troubleshooting)**
 
 ## Prerequisites
 Before running the Ansible code you should install the following packages with the specified versions or later on the Ansible machine.
