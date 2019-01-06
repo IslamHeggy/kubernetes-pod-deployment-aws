@@ -4,7 +4,7 @@ Pod Kubernetes Deployments
 This repository contains ansible code to automate the pod deployments on kubernetes cluster with all the needed security groups, load balancers, domains and waf rules.
 
 ## Table of Contents
-* **[Prerequisites](#pre)**
+* **[Prerequisites](#Prerequisites)**
 * **[How does it work?](#how-does-it-work)**
 * **[Create New Deployment](#Create-New-Deployment)**
 * **[Edit Already Existing Deployment](#Edit-Already-Existing-Deployment)**
